@@ -101,6 +101,22 @@ section .eyebrow{color:var(--brand-2)}
 .contact .box{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:24px}
 .contact .box a{display:block;font-weight:700;font-size:1.1rem;color:var(--brand-2);text-decoration:none;margin-top:4px;word-break:break-all}
 .contact .box small{color:var(--muted)}
+.contact form{display:grid;gap:12px}
+.contact label{display:grid;gap:5px;font-size:.84rem;font-weight:600}
+.contact label i{font-style:normal;font-weight:400;color:var(--muted)}
+.contact input,.contact select,.contact textarea{font:inherit;font-size:.95rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.contact input:focus,.contact select:focus,.contact textarea:focus{outline:2px solid var(--brand-2);outline-offset:1px;border-color:var(--brand-2)}
+.contact textarea{resize:vertical;min-height:84px}
+.contact .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.contact button{font:inherit;font-weight:700;font-size:.95rem;background:var(--brand);color:#fff;border:0;border-radius:10px;padding:12px 16px;cursor:pointer}
+.contact button:disabled{opacity:.6;cursor:wait}
+.contact .msg{font-size:.88rem;margin:0}
+.contact .msg:empty{display:none}
+.contact .msg.ok{color:#2c8553}
+.contact .msg.err{color:#c4432e}
+.contact .alt{font-size:.82rem;color:var(--muted)}
+.contact .alt a{display:inline;font-size:inherit;margin:0}
+.hp{position:absolute;left:-9999px}
 
 footer{padding:32px 0 48px;color:var(--muted);font-size:.86rem}
 footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px}
@@ -108,6 +124,9 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px}
 @media (max-width:920px){
   .products,.pillars{grid-template-columns:1fr 1fr}
   .contact .wrap{grid-template-columns:1fr}
+}
+@media (max-width:480px){
+  .contact .row2{grid-template-columns:1fr}
 }
 @media (max-width:640px){
   .products,.pillars{grid-template-columns:1fr}
@@ -273,11 +292,39 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px}
     <div>
       <div class="eyebrow">Contato</div>
       <h2>Quer ser avisado no lançamento?</h2>
-      <p class="lead" style="margin:0">Mande uma mensagem dizendo qual produto interessa. Estamos selecionando empresas para testar as primeiras versões.</p>
+      <p class="lead" style="margin:0">Conte qual produto interessa. Estamos selecionando empresas para testar as primeiras versões.</p>
     </div>
     <div class="box">
-      <small>E-mail</small>
-      <a href="mailto:contato@useopera.com.br">contato@useopera.com.br</a>
+      <form id="form-contato">
+        <input type="checkbox" name="botcheck" class="hp" tabindex="-1" autocomplete="off">
+        <label>Nome
+          <input name="nome" required autocomplete="name">
+        </label>
+        <div class="row2">
+          <label>E-mail
+            <input type="email" name="email" required autocomplete="email">
+          </label>
+          <label><span>WhatsApp <i>(opcional)</i></span>
+            <input type="tel" name="whatsapp" autocomplete="tel" placeholder="(27) 99999-9999">
+          </label>
+        </div>
+        <label>Produto de interesse
+          <select name="produto" required>
+            <option value="">Escolha…</option>
+            <option>OperaFrota — ativos, frotas e máquinas</option>
+            <option>OperaGado — rebanho bovino</option>
+            <option>OperaCaixa — controle financeiro</option>
+            <option>OperaObra — obras e reformas</option>
+            <option>Mais de um</option>
+          </select>
+        </label>
+        <label><span>Mensagem <i>(opcional)</i></span>
+          <textarea name="mensagem" placeholder="Ex.: tenho 12 caminhões e 3 tratores"></textarea>
+        </label>
+        <button type="submit">Enviar</button>
+        <p class="msg" role="status" aria-live="polite"></p>
+        <p class="alt">Se preferir, escreva para <a href="mailto:contato@useopera.com.br">contato@useopera.com.br</a></p>
+      </form>
     </div>
   </div>
 </section>
@@ -317,6 +364,45 @@ document.querySelectorAll("[data-produto]").forEach(function (card) {
   });
   const soon = card.querySelector(".soon");
   if (soon) soon.textContent = "Teste grátis disponível.";
+});
+
+/*
+  FORMULÁRIO DE CONTATO (Web3Forms, gratuito até 250 envios/mês)
+  A chave é pública por natureza; ela só diz para qual e-mail o Web3Forms envia.
+*/
+const WEB3FORMS_CHAVE = "51cf7d0c-b448-4f9e-9f7e-e3dc313c9cde";
+
+document.getElementById("form-contato").addEventListener("submit", function (e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector("button");
+  const msg = form.querySelector(".msg");
+  const dados = Object.fromEntries(new FormData(form));
+  if (dados.botcheck) return;
+  delete dados.botcheck;
+  dados.access_key = WEB3FORMS_CHAVE;
+  dados.subject = "Site useopera: " + dados.produto;
+  dados.from_name = "Site useopera";
+
+  btn.disabled = true; btn.textContent = "Enviando…";
+  msg.className = "msg"; msg.textContent = "";
+  fetch("https://api.web3forms.com/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(dados)
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (r) {
+      if (!r.success) throw new Error(r.message);
+      form.reset();
+      msg.className = "msg ok";
+      msg.textContent = "Recebemos sua mensagem. Respondemos em breve.";
+    })
+    .catch(function () {
+      msg.className = "msg err";
+      msg.textContent = "Não foi possível enviar agora. Tente de novo ou escreva para contato@useopera.com.br.";
+    })
+    .finally(function () { btn.disabled = false; btn.textContent = "Enviar"; });
 });
 </script>
 </body>
